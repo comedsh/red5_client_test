@@ -270,66 +270,10 @@ class FrameBufferGenerator extends Thread{
 	@Override
 	public void run() {
 		
-		collectMP4();
+		// collectMP4();
 		
-		// collectFlv();
+		collectFlv();
 
-	}
-	
-	/**
-	 * 
-	 * 自己构造 Reader，然后从 reader 直接获取视频的原始数据，并发送给 RED5.. 结果问题是，视频播放不流畅，非常快，感觉像是没有视频控制.. 
-	 * 
-	 * 注意：必须用 @see IStreamableFileService 来构建流文件的读取操作，既 @see FLVService, MP4Service
-	 * 
-	 * @see FrameBufferGenerator#collectFlv() 正确的做法
-	 * 
-	 */
-	void collectMp4Reference(){
-		
-		File file = new File( VideoTest.class.getResource("monkey.mp4").getFile() );
-		
-		try {
-			
-			MP4Reader reader = new MP4Reader( file );;
-		
-			while( reader.hasMoreTags() ){
-				
-				ITag tag = reader.readTag();
-				
-				IRTMPEvent msg = new VideoData( tag.getBody() );
-				
-				IMessage message = RTMPMessage.build( msg );
-				
-				frameBuffer.add( message );
-				
-				System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> record one frame into frame buffer");
-				
-				// Thread.currentThread().suspend(); // 放一帧数据，用来调试
-				
-				TimeUnit.MILLISECONDS.sleep( RTMPClientTest.FRAME_MILLISECONDS_INTERVAL );
-				
-				// 之前犯过的错误 TimeUnit.SECONDS.sleep(20); 是休眠 20 ms
-				
-				// 循环读取文件内容
-				if( !reader.hasMoreTags() ){
-					
-					System.out.println(" read to the end, reconstruct the file and re-read it ");
-					
-					reader = new MP4Reader( file );
-					
-				}
-					
-			}		
-			
-			RTMPClientTest.frameCollectedCompleted = true;
-			
-		} catch (Exception e) {
-			
-			e.printStackTrace();
-			
-		}	
-		
 	}
 	
 	/**
@@ -386,6 +330,7 @@ class FrameBufferGenerator extends Thread{
 				}            	
             	
             }
+            
 			RTMPClientTest.frameCollectedCompleted = true;
 			
 		} catch (Exception e) {
@@ -422,6 +367,10 @@ class FrameBufferGenerator extends Thread{
             
             while( stream.hasMore() ){
             	
+            	// 下面一行，是为了进行调试所用，真正环境当中，记得要删除 
+            	
+            	if( frameBuffer.size() >= 1 ) continue; // TRY III, 确保在没有发送成功之前，frame buffer 里面有且仅有一帧的数据可以读取到； 便于 debug.
+            	
             	IRTMPEvent event = stream.dequeue();
             	
             	RTMPMessage message = RTMPMessage.build(event);
@@ -429,13 +378,16 @@ class FrameBufferGenerator extends Thread{
             	// 判断是否已经超过了缓存的上限，这里我选择的做法是丢弃，更符合摄像直播的场景.. 
             	if( frameBuffer.size() < RTMPClientTest.FRAME_BUFFER_THREDHOLE ){
             	
-	            	frameBuffer.add( message );
+	            	frameBuffer.add( message ); // TRY II: 设置 Debug Point，控制数据一帧一帧的进行发送，便于 Debug. 不行，如果 debug 到这里，就不能 debug 主进程了..
 	            	
 	            	System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> record one frame into frame buffer");
             	
-            	}
+            	} 
             	
-            	TimeUnit.MILLISECONDS.sleep( RTMPClientTest.FRAME_MILLISECONDS_INTERVAL );
+            	
+            	// Thread.currentThread().wait(); // TRY I: 发送一帧数据过去，便于来进行 debug；不行，如果我想要看下一帧的时候，看不到，没人能够 invoke 它
+            	
+            	// TimeUnit.MILLISECONDS.sleep( RTMPClientTest.FRAME_MILLISECONDS_INTERVAL );
             	
             	// 循环读取文件内容，模拟视频流读取，便于调试直播
             	// 需要注意的是，如果是 record，记录在服务器上的视频文件并不会累加，只会记录一次播放完整的记录。我猜想，服务器比较智能，在存储一个新文件的时候，比对了流媒体的指纹，所以不让重复保存
@@ -462,5 +414,60 @@ class FrameBufferGenerator extends Thread{
 		}			
 	}
 	
+	/**
+	 * 
+	 * 自己构造 Reader，然后从 reader 直接获取视频的原始数据，并发送给 RED5.. 结果问题是，视频播放不流畅，非常快，感觉像是没有视频控制.. 
+	 * 
+	 * 注意：必须用 @see IStreamableFileService 来构建流文件的读取操作，既 @see FLVService, MP4Service
+	 * 
+	 * @see FrameBufferGenerator#collectFlv() 正确的做法
+	 * 
+	 */
+	void collectMp4Reference(){
+		
+		File file = new File( VideoTest.class.getResource("monkey.mp4").getFile() );
+		
+		try {
+			
+			MP4Reader reader = new MP4Reader( file );
+		
+			while( reader.hasMoreTags() ){
+				
+				ITag tag = reader.readTag();
+				
+				IRTMPEvent msg = new VideoData( tag.getBody() );
+				
+				IMessage message = RTMPMessage.build( msg );
+				
+				frameBuffer.add( message );
+				
+				System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> record one frame into frame buffer");
+				
+				// Thread.currentThread().suspend(); // 放一帧数据，用来调试
+				
+				TimeUnit.MILLISECONDS.sleep( RTMPClientTest.FRAME_MILLISECONDS_INTERVAL );
+				
+				// 之前犯过的错误 TimeUnit.SECONDS.sleep(20); 是休眠 20 ms
+				
+				// 循环读取文件内容
+				if( !reader.hasMoreTags() ){
+					
+					System.out.println(" read to the end, reconstruct the file and re-read it ");
+					
+					reader = new MP4Reader( file );
+					
+				}
+					
+			}		
+			
+			RTMPClientTest.frameCollectedCompleted = true;
+			
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+			
+		}	
+		
+	}	
 }
 
