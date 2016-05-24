@@ -12,6 +12,7 @@ import org.red5.client.net.rtmp.RTMPClient;
 import org.red5.io.ITag;
 import org.red5.io.ITagReader;
 import org.red5.io.flv.IFLV;
+import org.red5.io.mp4.IMP4;
 import org.red5.io.mp4.impl.MP4Reader;
 import org.red5.io.utils.ObjectMap;
 import org.red5.server.api.event.IEvent;
@@ -25,6 +26,7 @@ import org.red5.server.net.rtmp.event.Notify;
 import org.red5.server.net.rtmp.event.VideoData;
 import org.red5.server.net.rtmp.status.StatusCodes;
 import org.red5.server.service.flv.impl.FLVService;
+import org.red5.server.service.mp4.impl.MP4Service;
 import org.red5.server.stream.FileStreamSource;
 import org.red5.server.stream.message.RTMPMessage;
 import org.slf4j.Logger;
@@ -67,7 +69,7 @@ public class RTMPClientTest extends RTMPClient implements INetStreamEventHandler
 	
 	String streamName = "mystream";
 	
-	String LIVE_MODE = "record";
+	String LIVE_MODE = "live";
 	
 	int port = 1935;  // the RTMP port
 	
@@ -76,7 +78,7 @@ public class RTMPClientTest extends RTMPClient implements INetStreamEventHandler
 	// 服务器会为每一个 Stream (流媒体产生的流) 分配一个唯一的 ID
 	Number streamId = 0;
 	
-	public static final int FRAME_MILLISECONDS_INTERVAL = 20; 
+	public static final int FRAME_MILLISECONDS_INTERVAL = 10; // 1 秒钟 100 帧的速度发送
 	
 	public RTMPClientTest() {
 		
@@ -181,15 +183,16 @@ public class RTMPClientTest extends RTMPClient implements INetStreamEventHandler
 		         */
 		        
 		        /**
-		         * 注意，这里是并发编程
+		         * 注意，这里是并发编程，下面的代码考虑到两层逻辑，如下
+		         * 
 		         * 1. 第一个判断条件，表示视频数据正在另一个线程中采集；这个条件保证，边采集，边发送
 		         * 2. 第二个判断条件，有一种可能性 当 frameCollectedCompleted = true，视频数据采集完成了；但是这个时候 frameBuffer 里面可能仍有数据，所以需要判断 frameBuffer 是否仍有待发送的数据。 
 		         */
-		        while ( frameCollectedCompleted == false || ( message = frameBuffer.poll() ) != null ) {
+		        while ( frameCollectedCompleted == false  ) {
 		        	
 		        	while(( message = frameBuffer.poll() ) != null ){
 		        		
-		        		System.out.println(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> push success ~~ ");
+		        		System.out.println(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> push success；frameCollectedCompleted == false ~~ ");
 		        		
 		        		/*
 			        	 * 真正的开始 publish 数据了
@@ -199,7 +202,25 @@ public class RTMPClientTest extends RTMPClient implements INetStreamEventHandler
 		            	
 		        	}
 
-		        } 
+		        }
+		        
+		        if( frameCollectedCompleted == true ){
+		        	
+		        	while(( message = frameBuffer.poll() ) != null ){
+		        		
+		        		System.out.println(" >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> push success；frameCollectedCompleted == true ~~ ");
+		        		
+		        		/*
+			        	 * 真正的开始 publish 数据了
+			        	 */
+		        		
+		            	this.publishStreamData( streamId, message );
+		            	
+		        	}	        	
+		        	
+		        }
+		        
+		        disconnect(); // if completed, then disconnect.
 		        
 		    } else if (StatusCodes.NS_UNPUBLISHED_SUCCESS.equals(code)) {
 		
@@ -249,9 +270,9 @@ class FrameBufferGenerator extends Thread{
 	@Override
 	public void run() {
 		
-		// collectMp4();
+		collectMP4();
 		
-		collectFlv();
+		// collectFlv();
 
 	}
 	
@@ -312,6 +333,70 @@ class FrameBufferGenerator extends Thread{
 	}
 	
 	/**
+	 * Copy the logic from collectFLV()
+	 */
+	void collectMP4(){
+		
+		File file = new File( VideoTest.class.getResource("monkey.mp4").getFile() );
+		
+		logger.debug( "test: {}", file );
+		
+		try {
+			
+			MP4Service service = new MP4Service(); 
+            
+            IMP4 mp4 = (IMP4) service.getStreamableFile( file );
+            
+            // no cacheable
+            // mp4.setCache(NoCacheImpl.getInstance()); 
+            
+            ITagReader reader = mp4.getReader();
+            
+            FileStreamSource stream = new FileStreamSource( reader );
+            
+            while( stream.hasMore() ){
+            	
+            	IRTMPEvent event = stream.dequeue();
+            	
+            	RTMPMessage message = RTMPMessage.build(event);
+            	
+            	// 判断是否已经超过了缓存的上限，这里我选择的做法是丢弃，更符合摄像直播的场景.. 
+            	if( frameBuffer.size() < RTMPClientTest.FRAME_BUFFER_THREDHOLE ){
+            	
+	            	frameBuffer.add( message );
+	            	
+	            	System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> record one frame into frame buffer");
+            	
+            	}
+            	
+            	TimeUnit.MILLISECONDS.sleep( RTMPClientTest.FRAME_MILLISECONDS_INTERVAL );
+            	
+            	// 循环读取文件内容，模拟视频流读取，便于调试直播
+            	// 需要注意的是，如果是 record，记录在服务器上的视频文件并不会累加，只会记录一次播放完整的记录。我猜想，服务器比较智能，在存储一个新文件的时候，比对了流媒体的指纹，所以不让重复保存
+            	// 但是，直播不影响，可以循环的直播。-> Yes，我的目的达到了。
+				if( !stream.hasMore() ){
+					
+					System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> read to the end, reconstruct the file and re-read it ");
+					
+					// 重置 reader 即可, MP4 重复播放一次之间的间隔要长些。等等.. 
+			        reader = mp4.getReader();
+			        
+			        stream = new FileStreamSource( reader );
+					
+				}            	
+            	
+            }
+			RTMPClientTest.frameCollectedCompleted = true;
+			
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+			
+		}			
+	}
+		
+	
+	/**
 	 * Golden code. 完整的将 flv 视频文件上传到了服务器，并且可以正常的回放
 	 * 
 	 * 注意，FLVService 的用法，这个太重要了，否则读取的视频，播放有问题，而且没办法直播.. 之前的代码参看 @see {@link FrameBufferGenerator#collectMp4Reference()}
@@ -341,13 +426,30 @@ class FrameBufferGenerator extends Thread{
             	
             	RTMPMessage message = RTMPMessage.build(event);
             	
-            	if( frameBuffer.size() < RTMPClientTest.FRAME_BUFFER_THREDHOLE );
+            	// 判断是否已经超过了缓存的上限，这里我选择的做法是丢弃，更符合摄像直播的场景.. 
+            	if( frameBuffer.size() < RTMPClientTest.FRAME_BUFFER_THREDHOLE ){
             	
-            	frameBuffer.add( message );
+	            	frameBuffer.add( message );
+	            	
+	            	System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> record one frame into frame buffer");
             	
-            	System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> record one frame into frame buffer");
+            	}
             	
             	TimeUnit.MILLISECONDS.sleep( RTMPClientTest.FRAME_MILLISECONDS_INTERVAL );
+            	
+            	// 循环读取文件内容，模拟视频流读取，便于调试直播
+            	// 需要注意的是，如果是 record，记录在服务器上的视频文件并不会累加，只会记录一次播放完整的记录。我猜想，服务器比较智能，在存储一个新文件的时候，比对了流媒体的指纹，所以不让重复保存
+            	// 但是，直播不影响，可以循环的直播。-> Yes，我的目的达到了。
+				if( !stream.hasMore() ){
+					
+					System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> read to the end, reconstruct the file and re-read it ");
+					
+					// 重置 reader 即可
+			        reader = flv.getReader();
+			        
+			        stream = new FileStreamSource( reader );
+					
+				}            	
             	
             }
             
