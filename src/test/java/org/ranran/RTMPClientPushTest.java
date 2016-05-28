@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory;
  * @author shangyang
  *
  */
-public class RTMPClientTest extends RTMPClient implements INetStreamEventHandler, IPendingServiceCallback, IEventDispatcher {  
+public class RTMPClientPushTest extends RTMPClient implements INetStreamEventHandler, IPendingServiceCallback, IEventDispatcher {  
 
 	/*
 	 * @TODO frameBuffer 的数据怎么来？
@@ -61,9 +61,9 @@ public class RTMPClientTest extends RTMPClient implements INetStreamEventHandler
 	public static volatile int FRAME_BUFFER_THREDHOLE = 100; // frame buffer 的缓存上限  
 	
 	@SuppressWarnings("unused")
-	private static final Logger logger = LoggerFactory.getLogger(RTMPClientTest.class); 
+	private static final Logger logger = LoggerFactory.getLogger(RTMPClientPushTest.class); 
 	
-	String host = "127.0.0.1";
+	String host = "10.211.55.8";
 	
 	String app = "my-first-red5-example";
 	
@@ -80,7 +80,7 @@ public class RTMPClientTest extends RTMPClient implements INetStreamEventHandler
 	
 	public static final int FRAME_MILLISECONDS_INTERVAL = 10; // 1 秒钟 100 帧的速度发送
 	
-	public RTMPClientTest() {
+	public RTMPClientPushTest() {
 		
 	    super();
 	    
@@ -242,7 +242,7 @@ public class RTMPClientTest extends RTMPClient implements INetStreamEventHandler
     
 	public static void main(String[] args) {
 		
-	    new RTMPClientTest();
+	    new RTMPClientPushTest();
 	    
 	}  
 	
@@ -259,7 +259,7 @@ class FrameBufferGenerator extends Thread{
 
 	ConcurrentLinkedQueue<IMessage> frameBuffer;
 	
-	private static final Logger logger = LoggerFactory.getLogger(RTMPClientTest.class); 
+	private static final Logger logger = LoggerFactory.getLogger(RTMPClientPushTest.class); 
 	
 	public FrameBufferGenerator( ConcurrentLinkedQueue<IMessage> frameBuffer ){
 		
@@ -305,7 +305,7 @@ class FrameBufferGenerator extends Thread{
             	RTMPMessage message = RTMPMessage.build(event);
             	
             	// 判断是否已经超过了缓存的上限，这里我选择的做法是丢弃，更符合摄像直播的场景.. 
-            	if( frameBuffer.size() < RTMPClientTest.FRAME_BUFFER_THREDHOLE ){
+            	if( frameBuffer.size() < RTMPClientPushTest.FRAME_BUFFER_THREDHOLE ){
             	
 	            	frameBuffer.add( message );
 	            	
@@ -313,7 +313,7 @@ class FrameBufferGenerator extends Thread{
             	
             	}
             	
-            	TimeUnit.MILLISECONDS.sleep( RTMPClientTest.FRAME_MILLISECONDS_INTERVAL );
+            	TimeUnit.MILLISECONDS.sleep( RTMPClientPushTest.FRAME_MILLISECONDS_INTERVAL );
             	
             	// 循环读取文件内容，模拟视频流读取，便于调试直播
             	// 需要注意的是，如果是 record，记录在服务器上的视频文件并不会累加，只会记录一次播放完整的记录。我猜想，服务器比较智能，在存储一个新文件的时候，比对了流媒体的指纹，所以不让重复保存
@@ -331,7 +331,7 @@ class FrameBufferGenerator extends Thread{
             	
             }
             
-			RTMPClientTest.frameCollectedCompleted = true;
+			RTMPClientPushTest.frameCollectedCompleted = true;
 			
 		} catch (Exception e) {
 			
@@ -376,7 +376,7 @@ class FrameBufferGenerator extends Thread{
             	RTMPMessage message = RTMPMessage.build(event);
             	
             	// 判断是否已经超过了缓存的上限，这里我选择的做法是丢弃，更符合摄像直播的场景.. 
-            	if( frameBuffer.size() < RTMPClientTest.FRAME_BUFFER_THREDHOLE ){
+            	if( frameBuffer.size() < RTMPClientPushTest.FRAME_BUFFER_THREDHOLE ){
             	
 	            	frameBuffer.add( message ); // TRY II: 设置 Debug Point，控制数据一帧一帧的进行发送，便于 Debug. 不行，如果 debug 到这里，就不能 debug 主进程了..
 	            	
@@ -405,7 +405,7 @@ class FrameBufferGenerator extends Thread{
             	
             }
             
-			RTMPClientTest.frameCollectedCompleted = true;
+			RTMPClientPushTest.frameCollectedCompleted = true;
 			
 		} catch (Exception e) {
 			
@@ -445,7 +445,7 @@ class FrameBufferGenerator extends Thread{
 				
 				// Thread.currentThread().suspend(); // 放一帧数据，用来调试
 				
-				TimeUnit.MILLISECONDS.sleep( RTMPClientTest.FRAME_MILLISECONDS_INTERVAL );
+				TimeUnit.MILLISECONDS.sleep( RTMPClientPushTest.FRAME_MILLISECONDS_INTERVAL );
 				
 				// 之前犯过的错误 TimeUnit.SECONDS.sleep(20); 是休眠 20 ms
 				
@@ -460,7 +460,7 @@ class FrameBufferGenerator extends Thread{
 					
 			}		
 			
-			RTMPClientTest.frameCollectedCompleted = true;
+			RTMPClientPushTest.frameCollectedCompleted = true;
 			
 		} catch (Exception e) {
 			

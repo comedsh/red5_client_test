@@ -18,8 +18,6 @@ dependencies {
 
     compile group: 'commons-collections', name: 'commons-collections', version: '3.2'
     
-    testCompile group: 'junit', name: 'junit', version: '4.+'
-    
     compile group: 'javax.media', name: 'jmf', version: '2.1.1e'
 
 	compile group: 'org.red5', name: 'red5-client', version: '1.0.7-RELEASE'
