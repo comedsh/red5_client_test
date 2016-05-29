@@ -63,7 +63,7 @@ public class RTMPClientPushTest extends RTMPClient implements INetStreamEventHan
 	@SuppressWarnings("unused")
 	private static final Logger logger = LoggerFactory.getLogger(RTMPClientPushTest.class); 
 	
-	String host = "10.211.55.8";
+	String host = "127.0.0.1";
 	
 	String app = "my-first-red5-example";
 	

@@ -1,10 +1,9 @@
 package org.ranran;
 
-import static org.junit.Assert.*;
-
 import java.io.File;
 import java.io.IOException;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.red5.io.ITag;
 import org.red5.io.flv.impl.FLVReader;
@@ -13,7 +12,6 @@ import org.red5.server.messaging.IMessage;
 import org.red5.server.net.rtmp.event.IRTMPEvent;
 import org.red5.server.net.rtmp.event.VideoData;
 import org.red5.server.stream.message.RTMPMessage;
-import org.springframework.util.Assert;
 
 public class VideoTest {
 	
@@ -39,7 +37,7 @@ public class VideoTest {
 			
 			IMessage message = RTMPMessage.build( msg );
 			
-			assertTrue( message != null );
+			Assert.assertTrue( message != null );
 			
 			System.out.println( tag.getBody() );
 			
