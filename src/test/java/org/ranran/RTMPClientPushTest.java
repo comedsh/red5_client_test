@@ -300,6 +300,8 @@ class FrameBufferGenerator extends Thread{
             
             while( stream.hasMore() ){
             	
+            	if( frameBuffer.size() >= 1 ) continue; // TRY III, 确保在没有发送成功之前，frame buffer 里面有且仅有一帧的数据可以读取到； 便于 debug.
+            	
             	IRTMPEvent event = stream.dequeue();
             	
             	RTMPMessage message = RTMPMessage.build(event);
@@ -313,7 +315,7 @@ class FrameBufferGenerator extends Thread{
             	
             	}
             	
-            	TimeUnit.MILLISECONDS.sleep( RTMPClientPushTest.FRAME_MILLISECONDS_INTERVAL );
+            	// TimeUnit.MILLISECONDS.sleep( RTMPClientPushTest.FRAME_MILLISECONDS_INTERVAL );
             	
             	// 循环读取文件内容，模拟视频流读取，便于调试直播
             	// 需要注意的是，如果是 record，记录在服务器上的视频文件并不会累加，只会记录一次播放完整的记录。我猜想，服务器比较智能，在存储一个新文件的时候，比对了流媒体的指纹，所以不让重复保存
@@ -387,7 +389,7 @@ class FrameBufferGenerator extends Thread{
             	
             	// Thread.currentThread().wait(); // TRY I: 发送一帧数据过去，便于来进行 debug；不行，如果我想要看下一帧的时候，看不到，没人能够 invoke 它
             	
-            	// TimeUnit.MILLISECONDS.sleep( RTMPClientTest.FRAME_MILLISECONDS_INTERVAL );
+            	// TimeUnit.MILLISECONDS.sleep( RTMPClientPushTest.FRAME_MILLISECONDS_INTERVAL );
             	
             	// 循环读取文件内容，模拟视频流读取，便于调试直播
             	// 需要注意的是，如果是 record，记录在服务器上的视频文件并不会累加，只会记录一次播放完整的记录。我猜想，服务器比较智能，在存储一个新文件的时候，比对了流媒体的指纹，所以不让重复保存

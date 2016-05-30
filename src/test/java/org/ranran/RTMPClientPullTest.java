@@ -18,6 +18,9 @@ import org.red5.server.net.rtmp.status.StatusCodes;
 
 /**
  * 
+ * 就用这个类来模拟 live 的方式，注意，因为你是推的一个视频文件作为流的方式，这个永远不能替代真正的摄像头流的方式，
+ * 所以，在播放的时候，会有卡顿... 
+ * 
  * 
  * 
  * @author shangyang
@@ -25,7 +28,7 @@ import org.red5.server.net.rtmp.status.StatusCodes;
  */
 public class RTMPClientPullTest extends RTMPClient{
 	
-    private String server = "127.0.0.1"; 
+    private String server = "10.211.55.8"; 
     
     private int port = 1935;
 
@@ -89,7 +92,7 @@ public class RTMPClientPullTest extends RTMPClient{
     	
         public void dispatchEvent(IEvent event) {
         	
-            System.out.println(" ============================================ ClientStream.dispachEvent()" + event.toString());
+            System.out.println(" ============================================ received stream" + event.toString());
             
         }
         
