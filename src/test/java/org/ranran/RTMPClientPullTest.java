@@ -28,7 +28,7 @@ import org.red5.server.net.rtmp.status.StatusCodes;
  */
 public class RTMPClientPullTest extends RTMPClient{
 	
-    private String server = "10.211.55.8"; 
+    private String server = "127.0.0.1"; 
     
     private int port = 1935;
 
@@ -92,7 +92,7 @@ public class RTMPClientPullTest extends RTMPClient{
     	
         public void dispatchEvent(IEvent event) {
         	
-            System.out.println(" ============================================ received stream" + event.toString());
+            System.out.println(" ============================================ received stream event: " + event.toString());
             
         }
         

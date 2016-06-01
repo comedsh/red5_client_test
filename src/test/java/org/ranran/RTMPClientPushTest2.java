@@ -37,7 +37,7 @@ public class RTMPClientPushTest2 extends RTMPClient implements INetStreamEventHa
 	
 	private static final Logger logger = LoggerFactory.getLogger(RTMPClientPushTest.class); 
 	
-	String host = "127.0.0.1";
+	String host = "10.211.55.8";
 	
 	String app = "my-first-red5-example";
 	
@@ -70,6 +70,8 @@ public class RTMPClientPushTest2 extends RTMPClient implements INetStreamEventHa
 	public void resultReceived( IPendingServiceCall call ) { 
 		
 	    Object result = call.getResult();
+	    
+	    // TODO add the bad name scenario
 	    
 	    if (result instanceof ObjectMap) {
 	    	
@@ -158,16 +160,22 @@ public class RTMPClientPushTest2 extends RTMPClient implements INetStreamEventHa
 		            	
 		            	this.publishStreamData( streamId, message );		
 		            	
-		            	System.out.println( ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> published one record: " + message.getBody() );
+		            	System.out.println( ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> published one record: " + event.toString() );
 		            	
 						if( !stream.hasMore() ){
 							
-							System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> read to the end, reconstruct the file and re-read it ");
+							long start = System.currentTimeMillis();
+							
+							System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> read to the end, reconstruct the file ");
 							
 							// 重置 reader 即可
 					        reader = flv.getReader();
 					        
 					        stream = new FileStreamSource( reader );
+					        
+					        long end = System.currentTimeMillis();
+					        
+					        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> read to the end, reconstruct the file completed, time spent: " + ( end - start ) +" ms ");
 							
 						}            	
 		            	
